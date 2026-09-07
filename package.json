@@ -1,6 +1,6 @@
 {
   "name": "opencode-go-quota",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenCode TUI plugin: /quota dialog showing OpenCode Go rolling/weekly/monthly usage via the official usage API (curl, no browser cookies)",
   "type": "module",
   "license": "MIT",

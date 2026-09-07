@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process"
-import { copyFile, readFile, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 
 const USAGE_URL = "https://opencode.ai/zen/go/v1/usage"
 const KEYS_FILE = join(homedir(), ".config", "opencode", "go-keys.json")
@@ -86,7 +86,22 @@ async function loadState() {
   return { raw, active, plans }
 }
 
-async function switchPlan(name) {
+export async function ensureKeysFile() {
+  try {
+    await readFile(KEYS_FILE)
+    return
+  } catch {}
+  let key
+  try {
+    const auth = JSON.parse(await readFile(AUTH_FILE, "utf8"))
+    key = auth?.["opencode-go"]?.key
+  } catch {}
+  const seed = { active: 1, plans: key ? [{ name: "套餐A", key }] : [] }
+  await mkdir(dirname(KEYS_FILE), { recursive: true })
+  await writeFile(KEYS_FILE, `${JSON.stringify(seed, null, 2)}\n`, { mode: 0o600 })
+}
+
+export async function switchPlan(name) {
   const { raw, active, plans } = await loadState()
   const index = plans.findIndex((p) => p.name.toLowerCase() === String(name).toLowerCase())
   if (index === -1) return { code: 1, output: `没有匹配 "${name}" 的套餐` }
@@ -111,13 +126,14 @@ function showDialog(api, title, message) {
 async function showQuotaPanel(api) {
   let state
   try {
+    await ensureKeysFile()
     state = await loadState()
   } catch {
-    showDialog(api, "Go 套餐", "未找到 go-keys.json。编辑 ~/.config/opencode/go-keys.json 添加套餐：\n\n{\"active\":1, \"plans\":[{\"name\":\"邮箱\", \"key\":\"sk-…\"}]}")
+    showDialog(api, "Go 套餐", "go-keys.json 读取失败。编辑 ~/.config/opencode/go-keys.json 添加套餐：\n\n{\"active\":1, \"plans\":[{\"name\":\"邮箱\", \"key\":\"sk-…\"}]}")
     return
   }
   if (!state.plans.length) {
-    showDialog(api, "Go 套餐", "go-keys.json 里还没有套餐。编辑 ~/.config/opencode/go-keys.json 添加。")
+    showDialog(api, "Go 套餐", "还没有套餐。编辑 ~/.config/opencode/go-keys.json 添加：\n\n{\"active\":1, \"plans\":[{\"name\":\"邮箱\", \"key\":\"sk-…\"}]}\n\n（若 /connect 里还没有 Go key，先运行 /connect）")
     return
   }
 
