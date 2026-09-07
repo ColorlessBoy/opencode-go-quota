@@ -36,6 +36,9 @@
     "node": ">=18",
     "opencode": ">=1.14.0"
   },
+  "scripts": {
+    "test": "node --test test/smoke.test.mjs"
+  },
   "peerDependencies": {
     "@opencode-ai/plugin": ">=1.14.0"
   }
